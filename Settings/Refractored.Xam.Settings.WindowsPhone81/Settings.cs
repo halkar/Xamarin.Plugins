@@ -3,6 +3,7 @@
 using Windows.Storage;
 using Refractored.Xam.Settings.Abstractions;
 using System;
+using System.Reflection;
 
 namespace Refractored.Xam.Settings
 {
@@ -46,9 +47,9 @@ namespace Refractored.Xam.Settings
 
           value = Convert.ToDecimal(savedDecimal, System.Globalization.CultureInfo.InvariantCulture);
 
-          return null != value ? (T)value : defaultValue;
+          return (T)value;
         }
-        else if (typeof(T) == typeof(DateTime))
+        if (typeof(T) == typeof(DateTime))
         {
           string savedTime = null;
           // If the key exists, retrieve the value.
@@ -87,28 +88,37 @@ namespace Refractored.Xam.Settings
     /// <param name="key">Key for settting</param>
     /// <param name="value">Value to set</param>
     /// <returns>True of was added or updated and you need to save it.</returns>
-    public bool AddOrUpdateValue(string key, object value)
+    public bool AddOrUpdateValue<T>(string key, T value)
     {
       bool valueChanged = false;
       lock (m_Locker)
       {
-
-        if (value is decimal)
+        if (Equals(default(T), value))
         {
-          return AddOrUpdateValue(key, Convert.ToString((decimal)value, System.Globalization.CultureInfo.InvariantCulture));
-        }
-        else if (value is DateTime)
-        {
-          return AddOrUpdateValue(key, Convert.ToString(((DateTime)value).Ticks, System.Globalization.CultureInfo.InvariantCulture));
+          valueChanged = AppSettings.Values.ContainsKey(key);
+          RemoveValue(key);
+          return valueChanged;
         }
 
+        Type typeOf = typeof(T);
+        if (typeOf == typeof(decimal))
+        {
+          return AddOrUpdateValue(key, Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture));
+        }
+        if (typeOf == typeof (DateTime)
+            || (typeOf.GetTypeInfo().IsGenericType
+                && typeOf.GetGenericTypeDefinition() == typeof (Nullable<>)
+                && typeOf.GetGenericTypeDefinition().GenericTypeArguments[0] == typeof (DateTime)))
+        {
+          return AddOrUpdateValue(key, Convert.ToString(((DateTime) (object) value).Ticks, System.Globalization.CultureInfo.InvariantCulture));
+        }
 
         // If the key exists
         if (AppSettings.Values.ContainsKey(key))
         {
 
           // If the value has changed
-          if (AppSettings.Values[key] != value)
+          if (AppSettings.Values[key].Equals(value))
           {
             // Store key new value
             AppSettings.Values[key] = value;
@@ -125,6 +135,19 @@ namespace Refractored.Xam.Settings
       }
 
       return valueChanged;
+    }
+
+    public void RemoveValue(string key)
+    {
+      lock (m_Locker)
+      {
+        // If the key exists
+        if (AppSettings.Values.ContainsKey(key))
+        {
+          AppSettings.Values.Remove(key);
+
+        }
+      }
     }
 
     /// <summary>

@@ -45,18 +45,24 @@ namespace Refractored.Xam.Settings
     /// <param name="key">Key for settting</param>
     /// <param name="value">Value to set</param>
     /// <returns>True of was added or updated and you need to save it.</returns>
-    public bool AddOrUpdateValue(string key, object value)
+    public bool AddOrUpdateValue<T>(string key, T value)
     {
       bool valueChanged = false;
 
       lock (locker)
       {
-        // If the key exists
-        if (IsoSettings.Contains(key))
+        // If the key exists and new value is equal to default
+        if (Equals(default(T), value))
         {
-
+          valueChanged = IsoSettings.Contains(key);
+          RemoveValue(key);
+          return valueChanged;
+        }
+        // If the key exists
+        else if (IsoSettings.Contains(key))
+        {
           // If the value has changed
-          if (IsoSettings[key] != value)
+          if (IsoSettings[key].Equals(value))
           {
             // Store key new value
             IsoSettings[key] = value;
@@ -82,7 +88,19 @@ namespace Refractored.Xam.Settings
       return valueChanged;
     }
 
-    /// <summary>
+    public void RemoveValue(string key)
+    {
+      lock (locker)
+      {
+        // If the key exists
+        if (IsoSettings.Contains(key))
+        {
+          IsoSettings.Remove(key);
+        }
+      }
+    }
+
+      /// <summary>
     /// Saves any changes out.
     /// </summary>
     [Obsolete("Save is deprecated and settings are automatically saved when AddOrUpdateValue is called.")]

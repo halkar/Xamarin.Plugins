@@ -105,11 +105,16 @@ namespace Refractored.Xam.Settings
     /// <param name="key">key to update</param>
     /// <param name="value">value to set</param>
     /// <returns>True if added or update and you need to save</returns>
-    public bool AddOrUpdateValue(string key, object value)
+    public bool AddOrUpdateValue<T>(string key, T value)
     {
       lock (locker)
       {
-        Type typeOf = value.GetType();
+        if (Equals(default(T), value))
+        {
+          RemoveValue(key);
+          return true;
+        }
+        Type typeOf = typeof(T);
         if (typeOf.IsGenericType && typeOf.GetGenericTypeDefinition() == typeof(Nullable<>))
         {
           typeOf = Nullable.GetUnderlyingType(typeOf);
@@ -144,7 +149,7 @@ namespace Refractored.Xam.Settings
           default:
             if(value is Guid)
             {
-              SharedPreferencesEditor.PutString(key, ((Guid)value).ToString());
+              SharedPreferencesEditor.PutString(key, ((Guid)(object)value).ToString());
             }
             else
             {
@@ -159,6 +164,15 @@ namespace Refractored.Xam.Settings
         SharedPreferencesEditor.Commit();
       }
       return true;
+    }
+
+    public void RemoveValue(string key)
+    {
+      lock (locker)
+      {
+        SharedPreferencesEditor.Remove(key);
+        SharedPreferencesEditor.Commit();
+      }
     }
 
     /// <summary>

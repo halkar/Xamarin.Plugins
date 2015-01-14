@@ -117,11 +117,16 @@ namespace Refractored.Xam.Settings
     /// <param name="key">Key for settting</param>
     /// <param name="value">Value to set</param>
     /// <returns>True of was added or updated and you need to save it.</returns>
-    public bool AddOrUpdateValue(string key, object value)
+    public bool AddOrUpdateValue<T>(string key, T value)
     {
       lock (locker)
       {
-        Type typeOf = value.GetType();
+        if (Equals(default(T), value))
+        {
+          RemoveValue(key);
+          return true;
+        }
+        Type typeOf = typeof(T);
         if (typeOf.IsGenericType && typeOf.GetGenericTypeDefinition() == typeof(Nullable<>))
         {
           typeOf = Nullable.GetUnderlyingType(typeOf);
@@ -157,7 +162,7 @@ namespace Refractored.Xam.Settings
           default:
             if (value is Guid)
             {
-              defaults.SetString(((Guid)value).ToString(), key);
+              defaults.SetString(((Guid)(object)value).ToString(), key);
             }
             else
             {
@@ -178,6 +183,25 @@ namespace Refractored.Xam.Settings
 
      
       return true;
+    }
+
+    public void RemoveValue(string key)
+    {
+      lock (locker)
+      {
+        var defaults = NSUserDefaults.StandardUserDefaults;
+        defaults.RemoveObject(key);
+
+        try
+        {
+          defaults.Synchronize();
+
+        }
+        catch (Exception ex)
+        {
+          Console.WriteLine("Unable to save: " + key, " Message: " + ex.Message);
+        }
+      }
     }
 
     /// <summary>

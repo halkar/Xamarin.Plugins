@@ -23,7 +23,13 @@ namespace Refractored.Xam.Settings.Abstractions
     /// <param name="key">Key for settting</param>
     /// <param name="value">Value to set</param>
     /// <returns>True of was added or updated and you need to save it.</returns>
-    bool AddOrUpdateValue(string key, Object value);
+    bool AddOrUpdateValue<T>(string key, T value);
+
+    /// <summary>
+    /// Remove value
+    /// </summary>
+    /// <param name="key">Key for settting</param>
+    void RemoveValue(string key);
 
     /// <summary>
     /// Saves any changes out.
